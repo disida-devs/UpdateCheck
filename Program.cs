@@ -2,45 +2,56 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 
-Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); // Это для кодировки windows-1251
-
-try
+async Task<List<string?>> getLinksAsync(string site)
 {
-    using (HttpClient httpClient = new HttpClient())
+    // Это для кодировки windows-1251
+    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+    try
     {
-        HttpResponseMessage response = await httpClient.GetAsync("http://www.ettu.ru/news/");
-
-        if (response.IsSuccessStatusCode)
+        using (HttpClient httpClient = new HttpClient())
         {
-            string htmlContent = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await httpClient.GetAsync("http://www.ettu.ru/news/");
 
-            HtmlParser parser = new HtmlParser();
-            IHtmlDocument document = await parser.ParseDocumentAsync(htmlContent);
-
-            // Получаем все теги <a>
-            var linkElements = document.QuerySelectorAll("a");
-
-            if (linkElements.Length > 0)
+            if (response.IsSuccessStatusCode)
             {
+                string htmlContent = await response.Content.ReadAsStringAsync();
+
+                HtmlParser parser = new HtmlParser();
+                IHtmlDocument document = await parser.ParseDocumentAsync(htmlContent);
+
+                List<string?> links = new List<string?>();
+
+                // Получаем все теги <a>
+                var linkElements = document.QuerySelectorAll("a");
+
                 foreach (var linkElement in linkElements)
                 {
                     // Получаем аттрибуты href у каждой ссылки
                     string? hrefValue = linkElement.GetAttribute("href");
-                    Console.WriteLine(hrefValue);
+                    links.Add(hrefValue);
                 }
+
+                return links;
             }
             else
             {
-                Console.WriteLine("Ссылки не найдены.");
+                throw new GetLinksException($"Ошибка при выполнении запроса к {site}: {response.StatusCode} - {response.ReasonPhrase}");
             }
         }
-        else
-        {
-            Console.WriteLine($"Ошибка: {response.StatusCode} - {response.ReasonPhrase}");
-        }
+    }
+    catch (HttpRequestException e)
+    {
+        throw new GetLinksException($"Ошибка при выполнении запроса к {site}: {e.Message}");
     }
 }
-catch (HttpRequestException e)
+
+var links = await getLinksAsync("http://www.ettu.ru/news/");
+
+links.ForEach(Console.WriteLine);
+
+class GetLinksException : Exception
 {
-    Console.WriteLine($"Ошибка при выполнении запроса: {e.Message}");
+    public GetLinksException(string message)
+        : base(message) {}
 }
