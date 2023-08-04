@@ -46,9 +46,30 @@ async Task<List<string?>> getLinksAsync(string site)
     }
 }
 
-var links = await getLinksAsync("http://www.ettu.ru/news/");
+// Проверяем работу модели
+using (UpdateCheckContext db = new UpdateCheckContext())
+{
+    // Сайты
+    Site site0 = new Site { Name = "8642", Url = "https://8642.ru/news" };
+    Site site1 = new Site { Name = "Сом", Url = "https://som.ru/wtf" };
 
-links.ForEach(Console.WriteLine);
+    db.Sites.AddRange(site0, site1);
+
+    // Ссылки
+    Link link0 = new Link { Site = site0, Url = "https://8642.ru/news/8642", Posted = true };
+    Link link1 = new Link { Site = site0, Url = "https://8642.ru/news/1", Posted = false };
+    Link link2 = new Link { Site = site1, Url = "https://som.ru/wtf/1", Posted = false };
+
+    db.Links.AddRange(link0, link1, link2);
+
+    // Параметры
+    Param param = new Param { Parameter = "Хуй будешь?", Value = "Буду" };
+
+    db.Params.Add(param);
+
+    // Сохраняем
+    db.SaveChanges();
+}
 
 class GetLinksException : Exception
 {
