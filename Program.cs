@@ -2,7 +2,7 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 
-async Task<List<string?>> getLinksAsync(string site)
+async Task<List<string>> getLinksAsync(Site site)
 {
     // Это для кодировки windows-1251
     Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -11,7 +11,7 @@ async Task<List<string?>> getLinksAsync(string site)
     {
         using (HttpClient httpClient = new HttpClient())
         {
-            HttpResponseMessage response = await httpClient.GetAsync("http://www.ettu.ru/news/");
+            HttpResponseMessage response = await httpClient.GetAsync(site.Url);
 
             if (response.IsSuccessStatusCode)
             {
@@ -20,7 +20,7 @@ async Task<List<string?>> getLinksAsync(string site)
                 HtmlParser parser = new HtmlParser();
                 IHtmlDocument document = await parser.ParseDocumentAsync(htmlContent);
 
-                List<string?> links = new List<string?>();
+                List<string> links = new List<string>();
 
                 // Получаем все теги <a>
                 var linkElements = document.QuerySelectorAll("a");
@@ -29,10 +29,14 @@ async Task<List<string?>> getLinksAsync(string site)
                 {
                     // Получаем аттрибуты href у каждой ссылки
                     string? hrefValue = linkElement.GetAttribute("href");
-                    links.Add(hrefValue);
+
+                    if (!string.IsNullOrEmpty(hrefValue))
+                    {
+                        links.Add(hrefValue);
+                    }
                 }
 
-                return links;
+                return links.Distinct().ToList();
             }
             else
             {
@@ -46,29 +50,26 @@ async Task<List<string?>> getLinksAsync(string site)
     }
 }
 
-// Проверяем работу модели
 using (UpdateCheckContext db = new UpdateCheckContext())
 {
-    // Сайты
-    Site site0 = new Site { Name = "8642", Url = "https://8642.ru/news" };
-    Site site1 = new Site { Name = "Сом", Url = "https://som.ru/wtf" };
+    var sites = db.Sites.ToList();
 
-    db.Sites.AddRange(site0, site1);
+    foreach (var site in sites)
+    {
+        List<string> links = await getLinksAsync(site);
+        
+        bool itFirstStart = db.Links.Any(links => links.Site == site);
 
-    // Ссылки
-    Link link0 = new Link { Site = site0, Url = "https://8642.ru/news/8642", Posted = true };
-    Link link1 = new Link { Site = site0, Url = "https://8642.ru/news/1", Posted = false };
-    Link link2 = new Link { Site = site1, Url = "https://som.ru/wtf/1", Posted = false };
+        foreach (string url in links)
+        {
+            if (!db.Links.Any(link => link.Site == site && link.Url == url))
+            {
+                db.Add(new Link { Site = site, Url = url, Posted = !itFirstStart });
+            }
+        }
 
-    db.Links.AddRange(link0, link1, link2);
-
-    // Параметры
-    Param param = new Param { Parameter = "Хуй будешь?", Value = "Буду" };
-
-    db.Params.Add(param);
-
-    // Сохраняем
-    db.SaveChanges();
+        db.SaveChanges();
+    }
 }
 
 class GetLinksException : Exception
