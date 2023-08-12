@@ -1,6 +1,7 @@
 #nullable disable
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -12,7 +13,18 @@ public class UpdateCheckContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=postgres");
+        // TODO try catch если файла нет 
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", false, true)
+            .Build();
+
+        string host = configuration["DBHost"];
+        string port = configuration["DBPort"];
+        string baseName = configuration["DBName"];
+        string user = configuration["DBUser"];
+        string password = configuration["DBPassword"];
+
+        optionsBuilder.UseNpgsql($"Host={host};Port={port};Database={baseName};Username={user};Password={password}");
     }
 }
 
