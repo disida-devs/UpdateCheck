@@ -2,6 +2,8 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
+using Telegram.Bot;
 
 async Task<List<string>> getLinksAsync(Site site)
 {
@@ -307,6 +309,58 @@ void admin()
     }
 }
 
+async Task getNewLinksAsync()
+{
+    using UpdateCheckContext db = new UpdateCheckContext();
+
+    var sites = db.Sites.ToList();
+
+    foreach (var site in sites)
+    {
+        List<string> links = await getLinksAsync(site);
+        
+        bool itFirstStart = db.Links.Any(links => links.Site == site);
+
+        foreach (string url in links)
+        {
+            if (!db.Links.Any(link => link.Site == site && link.Url == url))
+            {
+                db.Add(new Link { Site = site, Url = url, Posted = !itFirstStart });
+            }
+        }
+
+        db.SaveChanges();
+    }
+}
+
+async Task postNewLinks()
+{
+    // TODO try catch если файла нет 
+    IConfiguration configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", false, true)
+        .Build();
+
+    string botToken = configuration["BotToken"];
+    string channel = configuration["BotPostChannel"];
+
+    var botClient = new TelegramBotClient(botToken);
+
+    using UpdateCheckContext db = new UpdateCheckContext();
+
+    var links = db.Links.Where(link => link.Posted == false).Include(link => link.Site).ToList();
+
+    foreach (var link in links)
+    {
+        Uri baseUri = new Uri(link.Site.Url);
+        Uri absoluteUri = new Uri(baseUri, link.Url);
+
+        await botClient.SendTextMessageAsync(channel, $"{link.Site.Name}\n{absoluteUri.AbsoluteUri}");
+
+        link.Posted = true;
+        db.SaveChanges();
+    }
+}
+
 if (args.Length > 0)
 {
     switch (args[0])
@@ -321,26 +375,8 @@ if (args.Length > 0)
     Environment.Exit(0);
 }
 
-using UpdateCheckContext db = new UpdateCheckContext();
-
-var sites = db.Sites.ToList();
-
-foreach (var site in sites)
-{
-    List<string> links = await getLinksAsync(site);
-    
-    bool itFirstStart = db.Links.Any(links => links.Site == site);
-
-    foreach (string url in links)
-    {
-        if (!db.Links.Any(link => link.Site == site && link.Url == url))
-        {
-            db.Add(new Link { Site = site, Url = url, Posted = !itFirstStart });
-        }
-    }
-
-    db.SaveChanges();
-}
+await getNewLinksAsync();
+await postNewLinks();
 
 class GetLinksException : Exception
 {
