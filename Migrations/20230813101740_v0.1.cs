@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace update_check.Migrations
 {
     /// <inheritdoc />
-    public partial class Test0 : Migration
+    public partial class v01 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,7 +16,7 @@ namespace update_check.Migrations
                 columns: table => new
                 {
                     Parameter = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: false)
+                    Value = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -29,8 +29,8 @@ namespace update_check.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "varchar(25)", nullable: false),
-                    Url = table.Column<string>(type: "text", nullable: false)
+                    Name = table.Column<string>(type: "varchar(25)", nullable: true),
+                    Url = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -43,8 +43,8 @@ namespace update_check.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SiteId = table.Column<int>(type: "integer", nullable: false),
-                    Url = table.Column<string>(type: "text", nullable: false),
+                    SiteId = table.Column<int>(type: "integer", nullable: true),
+                    Url = table.Column<string>(type: "text", nullable: true),
                     Posted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -54,8 +54,7 @@ namespace update_check.Migrations
                         name: "FK_Links_Sites_SiteId",
                         column: x => x.SiteId,
                         principalTable: "Sites",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
