@@ -275,38 +275,8 @@ void admin()
         }
     }
 
-    void editParameters()
-    {
-        
-    }
-
-    int? choice = null;
-    while (choice == null || choice < 1 || choice > 2)
-    {
-        Console.WriteLine("Что вы ходите сделать?");
-        Console.WriteLine("1. Редактирование сайтов");
-        Console.WriteLine("2. Редактирование параметров бота");
-
-        Console.Write("?> ");
-        string input = Console.ReadLine();
-
-        if (int.TryParse(input, out int parsedChoice))
-        {
-            choice = parsedChoice;
-        }
-
-        Console.WriteLine();
-    }
-
-    switch (choice)
-    {
-        case 1:
-            editSites();
-            break;
-        case 2:
-            editParameters();
-            break;
-    }
+    Console.WriteLine("Редактирование сайтов");
+    editSites();
 }
 
 async Task getNewLinksAsync()
@@ -314,6 +284,15 @@ async Task getNewLinksAsync()
     using UpdateCheckContext db = new UpdateCheckContext();
 
     var sites = db.Sites.ToList();
+
+    if (sites.Count == 0)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Список сайтов пуст. Запустите скрипт с параметром `edit`, чтобы добавить сайт.");
+        Console.ResetColor();
+
+        Environment.Exit(0);
+    }
 
     foreach (var site in sites)
     {
