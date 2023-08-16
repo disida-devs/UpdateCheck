@@ -374,6 +374,9 @@ if (args.Length > 0)
         case "edit":
             admin();
             break;
+        case "version":
+            Console.WriteLine("0.1");
+            break;
         default:
             Console.WriteLine("Я вас не понял. help и --help тоже нет.");
             break;
