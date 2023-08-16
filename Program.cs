@@ -43,13 +43,13 @@ async Task<List<string>> getLinksAsync(Site site)
             }
             else
             {
-                throw new GetLinksException($"Ошибка при выполнении запроса к {site}: {response.StatusCode} - {response.ReasonPhrase}");
+                throw new GetLinksException($"Ошибка при выполнении запроса к {site.Name}: {response.StatusCode} - {response.ReasonPhrase}");
             }
         }
     }
-    catch (HttpRequestException e)
+    catch (HttpRequestException exception)
     {
-        throw new GetLinksException($"Ошибка при выполнении запроса к {site}: {e.Message}");
+        throw new GetLinksException($"Ошибка при выполнении запроса к {site.Name}: {exception.Message}");
     }
 }
 
@@ -296,19 +296,28 @@ async Task getNewLinksAsync()
 
     foreach (var site in sites)
     {
-        List<string> links = await getLinksAsync(site);
-        
-        bool itFirstStart = db.Links.Any(links => links.Site == site);
-
-        foreach (string url in links)
+        try
         {
-            if (!db.Links.Any(link => link.Site == site && link.Url == url))
-            {
-                db.Add(new Link { Site = site, Url = url, Posted = !itFirstStart });
-            }
-        }
+            List<string> links = await getLinksAsync(site);
 
-        db.SaveChanges();
+            bool itFirstStart = db.Links.Any(links => links.Site == site);
+
+            foreach (string url in links)
+            {
+                if (!db.Links.Any(link => link.Site == site && link.Url == url))
+                {
+                    db.Add(new Link { Site = site, Url = url, Posted = !itFirstStart });
+                }
+            }
+
+            db.SaveChanges();
+        }
+        catch (GetLinksException exception) {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(exception.Message);
+            Console.ResetColor();
+            trySendLogToAdmin(exception.Message);
+        }
     }
 }
 
@@ -337,6 +346,24 @@ async Task postNewLinks()
 
         link.Posted = true;
         db.SaveChanges();
+    }
+}
+
+async Task trySendLogToAdmin(string log)
+{
+    // TODO try catch если файла нет 
+    IConfiguration configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", false, true)
+        .Build();
+
+    string botToken = configuration["BotToken"];
+    string adminTgId = configuration["BotAdminTgId"];
+
+    if (!string.IsNullOrEmpty(adminTgId))
+    {
+        var botClient = new TelegramBotClient(botToken);
+
+        await botClient.SendTextMessageAsync(adminTgId, log);
     }
 }
 
